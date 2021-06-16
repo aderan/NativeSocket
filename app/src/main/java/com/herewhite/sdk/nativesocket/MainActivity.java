@@ -1,12 +1,13 @@
 package com.herewhite.sdk.nativesocket;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
-    NativeSocket socket = new NativeSocket();
+    NativeSocketHelper socket = new NativeSocketHelper();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -15,7 +16,13 @@ public class MainActivity extends AppCompatActivity {
 
         // Example of a call to a native method
         TextView tv = findViewById(R.id.sample_text);
-        tv.setText(stringFromJNI());
+
+        findViewById(R.id.test).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                tv.setText(stringFromJNI());
+            }
+        });
     }
 
     static {
