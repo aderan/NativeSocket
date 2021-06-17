@@ -24,6 +24,8 @@ int testRtns(int argc, const char *argv[]);
 
 void set_ap_addressed(agora_socket_context *ctx);
 
+agora_socket_context *create_context(const char *app_id, const char *token);
+
 void token_will_expire_event(const char *token) {
     LOGE("[rtns-tcp-demo] token will expire %s\n", token);
 }
@@ -61,20 +63,76 @@ unsigned long time_diff(struct timespec *curr, struct timespec *prev) {
     return (unsigned long) diff_msec;
 }
 
+jfieldID file_descriptor_id;
+
+jfieldID FileDescriptor_descriptor(JNIEnv *env) {
+    if (!file_descriptor_id) {
+        jclass fdclass = env->FindClass("java/io/FileDescriptor");
+        file_descriptor_id = env->GetFieldID(fdclass, "descriptor", "I");
+    }
+    return file_descriptor_id;
+}
+
+JNIEXPORT int getFD(JNIEnv *env, jobject fileDescriptor) {
+    return env->GetIntField(fileDescriptor, FileDescriptor_descriptor(env));
+}
+
+JNIEXPORT void setFD(JNIEnv *env, jobject fileDescriptor, int fd) {
+    env->SetIntField(fileDescriptor, FileDescriptor_descriptor(env), fd);
+}
+
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_herewhite_sdk_nativesocket_MainActivity_stringFromJNI(JNIEnv *env, jobject) {
+Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_stringFromJNI(JNIEnv *env, jobject) {
     std::string hello = "Hello from C++";
-    const char *argv[] = {"PN", "170", "",
-                          "80e54398fed94ae8a010acf782f569b7",
-                          "007eJxTYAhlXLls3tbkUJe3u5eIL76pkxsbnCL1submi4N/q9eydl5XYLAwSDU1Mba0SEtNsTRJTLVINDA0SExOM7cwSjM1s0wyd+s4mXDgMwNDn6YlKzMDIwMEMENpFiAGAOysHso="};
-//    const char *argv[] = {"PN", "331", "",
-//                          "7e8224ffaec64a2dac57b5d3e25f3953",
-//                          "007eJxTYFh/klc5zF4pLVx6z+V+5h0lqodit6Q4Mfy7PGnrv11TGXwVGMxTLYyMTNLSElOTzUwSjVISk03Nk0xTjFONTNOMLU2NWfpOJhz4zMDwgO0qCzMDIwMEMENpFiAGAFCtHXM="};
+//    const char *argv[] = {"PN", "335", "",
+//                          "80e54398fed94ae8a010acf782f569b7",
+//                          "007eJxTYNgy9/k1n/CE6413J95+xrsgacGWwKM9cR+8vlzu+HDBo6hLgcHCINXUxNjSIi01xdIkMdUi0cDQIDE5zdzCKM3UzDLJfBHv6YQDnxkYqv4ksjIzMDJAADOUZgFiAOTjIhE="};
+    const char *argv[] = {"PN", "331", "",
+                          "7e8224ffaec64a2dac57b5d3e25f3953",
+                          "007eJxTYPjvH2Fs/VUn09zPMyOi8qmrt5tVWxLz/aXC/T92TTSblqzAYJ5qYWRkkpaWmJpsZpJolJKYbGqeZJpinGpkmmZsaWpsJ3A64cBnBobWEFVWZgZGBghghtIsQAwAA9obvg=="};
     testRtns(5, argv);
     return env->NewStringUTF(hello.c_str());
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_createContext(JNIEnv *env, jobject) {
+    agora_socket_context *ctx = create_context("80e54398fed94ae8a010acf782f569b7",
+                                               "007eJxTYChxUeO/+DKyaEbfjfNn+r8c28MirvBld9zPnpslXBM1m/8qMFgYpJqaGFtapKWmWJokplokGhgaJCanmVsYpZmaWSaZL95/KuHAZwaG7W2rmJkZGBkggBlKswAxAEJwILc=");
+    // set_ap_addressed(ctx);
+    return reinterpret_cast<jlong>(ctx);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_connect(JNIEnv *env, jobject, jlong context,
+                                                               jint chain_id,
+                                                               jobject fileDescriptor) {
+    char connection_id[64] = {};
+    int fd = agora_socket_tcp_connect(reinterpret_cast<agora_socket_context *>(context), chain_id,
+                                      0,
+                                      "", 0, connection_id);
+    setFD(env, fileDescriptor, fd);
+    return fd;
+}
+
+
+agora_socket_context *create_context(const char *app_id, const char *token) {
+    agora_socket_conf cfg;
+    cfg.app_id = app_id;
+    cfg.token = token;
+    cfg.log_file_path = "/mnt/sdcard/test.log";
+    cfg.file_size_in_kb = 1024;
+    cfg.log_level = 0x0001;
+    cfg.event_handlers.on_token_will_expire = token_will_expire_event;
+    cfg.event_handlers.on_network_type_changed = network_change;
+    agora_socket_context *ctx = agora_socket_context_new(&cfg);
+    if (ctx) {
+        LOGE("[rtns-tcp-demo] agora socket context Initialized %p\n", ctx);
+    } else {
+        LOGE("[rtns-tcp-demo] agora socket context cannot created");
+    }
+    return ctx;
+}
 
 static const int BUF_SIZE = 65536;
 static char buf[BUF_SIZE];
@@ -93,21 +151,14 @@ int testRtns(int argc, const char *argv[]) {
 
     sprintf(data, "GET /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: Close\r\n\r\n", argv[2]);
 
-    agora_socket_conf cfg;
-    cfg.app_id = argv[3];
-    cfg.token = argv[4];
-    cfg.log_file_path = "/mnt/sdcard/test.log";
-    cfg.file_size_in_kb = 1024;
-    cfg.log_level = 0x0001;
-    cfg.event_handlers.on_token_will_expire = token_will_expire_event;
-    cfg.event_handlers.on_network_type_changed = network_change;
-    agora_socket_context *ctx = agora_socket_context_new(&cfg);
+    agora_socket_context *ctx = create_context(argv[3], argv[4]);
     if (ctx) {
         LOGE("[rtns-tcp-demo] agora socket context Initialized %p\n", ctx);
     } else {
         LOGE("[rtns-tcp-demo] agora socket context cannot created");
-        exit(1);
+        return -2;
     }
+
     // set_ap_addressed(ctx);
 
     struct timespec send_time;
@@ -118,8 +169,9 @@ int testRtns(int argc, const char *argv[]) {
     if (fd_0 < 0) {
         LOGE("[rtns-tcp-demo] connect server failed, errno: %d\n", fd_0);
     }
-    int recv_length = 0;
+    LOGE("[rtns-tcp-demo] connection_id %s\n", connection_id);
 
+    int recv_length = 0;
     size_t send_length = strlen(data);
     size_t res = write(fd_0, data, send_length);
     if (res < 0) {
@@ -250,3 +302,68 @@ void set_ap_addressed(agora_socket_context *ctx) {
 //Java_com_hai_cmake_MainActivity_callJni(JNIEnv *env, jobject instance) {
 //    return stringFromJava(env, instance);
 //}
+
+#ifndef MAX_BUFFER_LEN
+#define MAX_BUFFER_LEN 65536
+#define MAX_HEAP_BUFFER_LEN 131072
+#endif
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_socketRead(JNIEnv *env, jobject thiz,
+                                                                  jobject fdObj,
+                                                                  jbyteArray data,
+                                                                  jint off,
+                                                                  jint len,
+                                                                  jint timeout) {
+    char BUF[MAX_BUFFER_LEN];
+    char *bufP;
+    jint fd, newfd, nread;
+
+    if (!fdObj) {
+        return -1;
+    }
+    fd = getFD(env, fdObj);
+    if (fd == -1) {
+        return -2;
+    }
+
+    if (len <= MAX_BUFFER_LEN) {
+        bufP = BUF;
+    } else {
+        if (len > MAX_HEAP_BUFFER_LEN) {
+            len = MAX_HEAP_BUFFER_LEN;
+        }
+        bufP = (char *) malloc((size_t) len);
+        if (bufP == NULL) {
+            bufP = BUF;
+            len = MAX_BUFFER_LEN;
+        }
+    }
+
+    nread = read(fd, bufP, len);
+    if (nread > 0) {
+        env->SetByteArrayRegion(data, off, nread, (jbyte *) bufP);
+    } else {
+        return -3;
+    }
+    if (bufP != BUF) {
+        free(bufP);
+    }
+    return nread;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_socketWrite(JNIEnv *env,
+                                                                   jobject thiz,
+                                                                   jobject file_descriptor,
+                                                                   jbyteArray b,
+                                                                   jint off,
+                                                                   jint len) {
+    int fd = getFD(env, file_descriptor);
+
+    sprintf(data, "GET /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: Close\r\n\r\n", "");
+    size_t send_length = strlen(data);
+    write(fd, data, send_length);
+}

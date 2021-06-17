@@ -1,5 +1,8 @@
 package com.herewhite.sdk.nativesocket;
 
+import android.util.Log;
+
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -17,6 +20,10 @@ public class RtnsSocketImpl extends SocketImpl {
     NativeSocketHelper nativeSocketHelper;
 
     private long context;
+    private FileDescriptor fileDescriptor;
+    private int timeout;
+    private InputStream inputStream;
+    private OutputStream outputStream;
 
     public RtnsSocketImpl(NativeSocketHelper helper) {
         this.nativeSocketHelper = helper;
@@ -25,11 +32,15 @@ public class RtnsSocketImpl extends SocketImpl {
     @Override
     protected void create(boolean stream) throws IOException {
         context = nativeSocketHelper.createContext();
+        fileDescriptor = new FileDescriptor();
     }
 
     @Override
     protected void connect(String host, int port) throws IOException {
-        nativeSocketHelper.connect(context, 117);
+        int ret = nativeSocketHelper.connect(context, 117, fileDescriptor);
+        if (ret > 0) {
+            Log.e("NativeSocket", "connect success");
+        }
     }
 
     @Override
@@ -59,12 +70,18 @@ public class RtnsSocketImpl extends SocketImpl {
 
     @Override
     protected InputStream getInputStream() throws IOException {
-        return null;
+        if (inputStream == null) {
+            inputStream = new RtnsSocketInputStream(this);
+        }
+        return inputStream;
     }
 
     @Override
     protected OutputStream getOutputStream() throws IOException {
-        return null;
+        if (outputStream == null) {
+            outputStream = new RtnsSocketOutputStream(this);
+        }
+        return outputStream;
     }
 
     @Override
@@ -83,12 +100,22 @@ public class RtnsSocketImpl extends SocketImpl {
     }
 
     @Override
-    public void setOption(int optID, Object value) throws SocketException {
-
+    public void setOption(int opt, Object value) throws SocketException {
+        if (opt == SO_TIMEOUT) {
+            timeout = (Integer) value;
+        }
     }
 
     @Override
     public Object getOption(int optID) throws SocketException {
         return null;
+    }
+
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public FileDescriptor getFD() {
+        return fileDescriptor;
     }
 }
