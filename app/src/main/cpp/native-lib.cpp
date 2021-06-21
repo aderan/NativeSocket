@@ -10,13 +10,10 @@
 
 // log标签
 #define TAG  "NativeSocket"
-
 // 定义info信息
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,TAG,__VA_ARGS__)
-
 // 定义debug信息
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
-
 // 定义error信息
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR,TAG,__VA_ARGS__)
 
@@ -63,6 +60,14 @@ unsigned long time_diff(struct timespec *curr, struct timespec *prev) {
     return (unsigned long) diff_msec;
 }
 
+JNIEXPORT void JNICALL
+RTNS_ThrowByName(JNIEnv *env, const char *name, const char *msg) {
+    jclass cls = env->FindClass(name);
+
+    if (cls != 0) /* Otherwise an exception has already been thrown */
+        env->ThrowNew(cls, msg);
+}
+
 jfieldID file_descriptor_id;
 
 jfieldID FileDescriptor_descriptor(JNIEnv *env) {
@@ -81,25 +86,28 @@ JNIEXPORT void setFD(JNIEnv *env, jobject fileDescriptor, int fd) {
     env->SetIntField(fileDescriptor, FileDescriptor_descriptor(env), fd);
 }
 
-
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_stringFromJNI(JNIEnv *env, jobject) {
+Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_runTest(JNIEnv *env, jobject) {
     std::string hello = "Hello from C++";
-//    const char *argv[] = {"PN", "335", "",
-//                          "80e54398fed94ae8a010acf782f569b7",
-//                          "007eJxTYNgy9/k1n/CE6413J95+xrsgacGWwKM9cR+8vlzu+HDBo6hLgcHCINXUxNjSIi01xdIkMdUi0cDQIDE5zdzCKM3UzDLJfBHv6YQDnxkYqv4ksjIzMDJAADOUZgFiAOTjIhE="};
-    const char *argv[] = {"PN", "331", "",
+    const char *argv[] = {"PN", "336", "",
                           "7e8224ffaec64a2dac57b5d3e25f3953",
-                          "007eJxTYPjvH2Fs/VUn09zPMyOi8qmrt5tVWxLz/aXC/T92TTSblqzAYJ5qYWRkkpaWmJpsZpJolJKYbGqeZJpinGpkmmZsaWpsJ3A64cBnBobWEFVWZgZGBghghtIsQAwAA9obvg=="};
+                          "007eJxTYIhtuZm5xnnacUfPVUldMqH1ynLLIxxjN5aueOnGM6vnwwQFBvNUCyMjk7S0xNRkM5NEo5TEZFPzJNMU41Qj0zRjS1PjsDfnEw58ZmAo/LiBlZmBkQECmKE0CxADAJDnHrk="};
     testRtns(5, argv);
     return env->NewStringUTF(hello.c_str());
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_createContext(JNIEnv *env, jobject) {
-    agora_socket_context *ctx = create_context("80e54398fed94ae8a010acf782f569b7",
-                                               "007eJxTYChxUeO/+DKyaEbfjfNn+r8c28MirvBld9zPnpslXBM1m/8qMFgYpJqaGFtapKWmWJokplokGhgaJCanmVsYpZmaWSaZL95/KuHAZwaG7W2rmJkZGBkggBlKswAxAEJwILc=");
-    // set_ap_addressed(ctx);
+Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_createContext(JNIEnv *env, jobject helper,
+                                                                     jstring app_id,
+                                                                     jstring token) {
+    const char *native_app_id = env->GetStringUTFChars(app_id, 0);
+    const char *native_token = env->GetStringUTFChars(token, 0);
+
+    agora_socket_context *ctx = create_context(native_app_id, native_token);
+
+    env->ReleaseStringUTFChars(app_id, native_app_id);
+    env->ReleaseStringUTFChars(token, native_token);
+
     return reinterpret_cast<jlong>(ctx);
 }
 
@@ -108,9 +116,11 @@ Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_connect(JNIEnv *env, jobj
                                                                jint chain_id,
                                                                jobject fileDescriptor) {
     char connection_id[64] = {};
-    int fd = agora_socket_tcp_connect(reinterpret_cast<agora_socket_context *>(context), chain_id,
+    int fd = agora_socket_tcp_connect(reinterpret_cast<agora_socket_context *>(context),
+                                      chain_id,
                                       0,
                                       "", 0, connection_id);
+    LOGI("[rtns-tcp-demo] connection_id %s\n", connection_id);
     setFD(env, fileDescriptor, fd);
     return fd;
 }
@@ -139,15 +149,15 @@ static char buf[BUF_SIZE];
 static char data[1024 * 1024];
 
 int testRtns(int argc, const char *argv[]) {
-    unsigned int chan_id;
+    unsigned int chainId;
 
     if (argc != 5) {
         LOGE("Usage: ./rtns chan_id name token\n");
         return -1;
     }
 
-    chan_id = atoi(argv[1]);
-    LOGE("chan_id: %u, name: %s, appid: %s, token: %s\n", chan_id, argv[2], argv[3], argv[4]);
+    chainId = atoi(argv[1]);
+    LOGE("chan_id: %u, name: %s, appid: %s, token: %s\n", chainId, argv[2], argv[3], argv[4]);
 
     sprintf(data, "GET /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: Close\r\n\r\n", argv[2]);
 
@@ -165,7 +175,7 @@ int testRtns(int argc, const char *argv[]) {
     clock_gettime(CLOCK_REALTIME, &send_time);
 
     char connection_id[64] = {};
-    int fd_0 = agora_socket_tcp_connect(ctx, chan_id, 0, "", 0, connection_id);
+    int fd_0 = agora_socket_tcp_connect(ctx, chainId, 0, "", 0, connection_id);
     if (fd_0 < 0) {
         LOGE("[rtns-tcp-demo] connect server failed, errno: %d\n", fd_0);
     }
@@ -284,53 +294,33 @@ void set_ap_addressed(agora_socket_context *ctx) {
     addresses = NULL;
 }
 
-/**
- * jni调用java方法
- * @param env
- * @param thiz
- * @return
- */
-//jstring stringFromJava(JNIEnv *env, jobject /* this */thiz) {
-//    jclass cls = env->GetObjectClass(thiz);
-//    jmethodID methodId = env->GetMethodID(cls, "stringFromJava", "()Ljava/lang/String;");
-//    jobject ob = env->AllocObject(cls);
-//    jstring str = static_cast<jstring>(env->CallObjectMethod(ob, methodId));
-//    return str;
-//}
-//
-//extern "C" JNIEXPORT jstring JNICALL
-//Java_com_hai_cmake_MainActivity_callJni(JNIEnv *env, jobject instance) {
-//    return stringFromJava(env, instance);
-//}
-
 #ifndef MAX_BUFFER_LEN
-#define MAX_BUFFER_LEN 65536
-#define MAX_HEAP_BUFFER_LEN 131072
+#define MAX_BUFFER_LEN 8192
+#define MAX_HEAP_BUFFER_LEN 65536
 #endif
 
-extern "C"
-JNIEXPORT jint JNICALL
+extern "C" JNIEXPORT jint JNICALL
 Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_socketRead(JNIEnv *env, jobject thiz,
                                                                   jobject fdObj,
                                                                   jbyteArray data,
                                                                   jint off,
-                                                                  jint len,
-                                                                  jint timeout) {
-    char BUF[MAX_BUFFER_LEN];
-    char *bufP;
-    jint fd, newfd, nread;
+                                                                  jint len) {
+    LOGE("[rtns-tcp-demo] READ call");
 
-    if (!fdObj) {
+    if (fdObj == NULL) {
+        RTNS_ThrowByName(env, "java/net/SocketException", "Socket closed");
         return -1;
     }
-    fd = getFD(env, fdObj);
+    jint fd = getFD(env, fdObj);
     if (fd == -1) {
-        return -2;
+        RTNS_ThrowByName(env, "java/net/SocketException", "Socket closed");
+        return -1;
     }
 
-    if (len <= MAX_BUFFER_LEN) {
-        bufP = BUF;
-    } else {
+    char BUF[MAX_BUFFER_LEN];
+    char *bufP;
+
+    if (len > MAX_BUFFER_LEN) {
         if (len > MAX_HEAP_BUFFER_LEN) {
             len = MAX_HEAP_BUFFER_LEN;
         }
@@ -339,31 +329,113 @@ Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_socketRead(JNIEnv *env, j
             bufP = BUF;
             len = MAX_BUFFER_LEN;
         }
+    } else {
+        bufP = BUF;
     }
 
-    nread = read(fd, bufP, len);
-    if (nread > 0) {
-        env->SetByteArrayRegion(data, off, nread, (jbyte *) bufP);
+    jint nread = read(fd, bufP, len);
+    if (nread <= 0) {
+        if (nread < 0) {
+            switch (errno) {
+                case ECONNRESET:
+                case EPIPE:
+                    RTNS_ThrowByName(env, "sun/net/ConnectionResetException", "Connection reset");
+                    break;
+
+                case EBADF:
+                    RTNS_ThrowByName(env, "java/net/SocketException", "Socket closed");
+                    break;
+
+                case EINTR:
+                    RTNS_ThrowByName(env, "java/io/InterruptedIOException",
+                                     "Operation interrupted");
+                    break;
+                default:
+                    // TODO JNU_ThrowByNameWithMessageAndLastError
+                    RTNS_ThrowByName(env, "java/net/SocketException", "Read failed");
+            }
+        }
     } else {
-        return -3;
+        env->SetByteArrayRegion(data, off, nread, (jbyte *) bufP);
     }
+
     if (bufP != BUF) {
         free(bufP);
     }
     return nread;
 }
 
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_socketWrite(JNIEnv *env,
-                                                                   jobject thiz,
-                                                                   jobject file_descriptor,
-                                                                   jbyteArray b,
-                                                                   jint off,
-                                                                   jint len) {
-    int fd = getFD(env, file_descriptor);
+#define min(a, b) ((a) < (b) ? (a) : (b))
 
-    sprintf(data, "GET /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: Close\r\n\r\n", "");
-    size_t send_length = strlen(data);
-    write(fd, data, send_length);
+extern "C" JNIEXPORT void JNICALL
+Java_com_herewhite_sdk_nativesocket_NativeSocketHelper_socketWrite(
+        JNIEnv *env,
+        jobject helper,
+        jobject fdObj,
+        jbyteArray data,
+        jint off,
+        jint len) {
+    LOGE("[rtns-tcp-demo] write call");
+
+    char *bufP;
+    char BUF[MAX_BUFFER_LEN];
+    int buflen;
+    int fd;
+
+    if (fdObj == NULL) {
+        RTNS_ThrowByName(env, "java/net/SocketException", "Socket closed");
+        return;
+    } else {
+        fd = getFD(env, fdObj);
+        if (fd == -1) {
+            RTNS_ThrowByName(env, "java/net/SocketException", "Socket closed");
+            return;
+        }
+    }
+
+    if (len <= MAX_BUFFER_LEN) {
+        bufP = BUF;
+        buflen = MAX_BUFFER_LEN;
+    } else {
+        buflen = min(MAX_HEAP_BUFFER_LEN, len);
+        bufP = (char *) malloc((size_t) buflen);
+
+        /* if heap exhausted resort to stack buffer */
+        if (bufP == NULL) {
+            bufP = BUF;
+            buflen = MAX_BUFFER_LEN;
+        }
+    }
+
+    while (len > 0) {
+        int chunkLen = min(buflen, len);
+        int llen = chunkLen;
+        env->GetByteArrayRegion(data, off, chunkLen, (jbyte *) bufP);
+
+        if (env->ExceptionCheck()) {
+            break;
+        } else {
+            int loff = 0;
+            while (llen > 0) {
+                int n = write(fd, bufP + loff, llen);
+                if (n > 0) {
+                    llen -= n;
+                    loff += n;
+                    continue;
+                }
+                // TODO
+                RTNS_ThrowByName(env, "java/net/SocketException", "Write failed");
+                if (bufP != BUF) {
+                    free(bufP);
+                }
+                return;
+            }
+            len -= chunkLen;
+            off += chunkLen;
+        }
+    }
+
+    if (bufP != BUF) {
+        free(bufP);
+    }
 }

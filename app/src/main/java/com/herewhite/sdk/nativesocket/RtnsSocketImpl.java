@@ -1,12 +1,11 @@
 package com.herewhite.sdk.nativesocket;
 
-import android.util.Log;
-
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketImpl;
@@ -15,57 +14,63 @@ import java.net.SocketImpl;
  * @author fenglibin
  */
 public class RtnsSocketImpl extends SocketImpl {
-    private static final int chainId = 117;
-
     NativeSocketHelper nativeSocketHelper;
 
-    private long context;
     private FileDescriptor fileDescriptor;
     private int timeout;
+
     private InputStream inputStream;
     private OutputStream outputStream;
 
     public RtnsSocketImpl(NativeSocketHelper helper) {
         this.nativeSocketHelper = helper;
-    }
 
-    @Override
-    protected void create(boolean stream) throws IOException {
-        context = nativeSocketHelper.createContext();
         fileDescriptor = new FileDescriptor();
     }
 
     @Override
+    protected void create(boolean stream) throws IOException {
+        nativeSocketHelper.ensureContextCreated();
+    }
+
+    @Override
     protected void connect(String host, int port) throws IOException {
-        int ret = nativeSocketHelper.connect(context, 117, fileDescriptor);
-        if (ret > 0) {
-            Log.e("NativeSocket", "connect success");
-        }
+        throw new UnsupportedOperationException();
     }
 
     @Override
     protected void connect(InetAddress address, int port) throws IOException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     protected void connect(SocketAddress address, int timeout) throws IOException {
-
+        // map address to chainId
+        int chainId = 0;
+        if (address instanceof InetSocketAddress) {
+            InetSocketAddress isa = (InetSocketAddress) address;
+            if ("121.196.198.83".equals(isa.getAddress().getHostAddress())) {
+                chainId = 336;
+            } else if ("echo.websocket.org".equals(isa.getAddress().getHostName())) {
+                chainId = 334;
+            }
+        }
+        nativeSocketHelper.connect(nativeSocketHelper.getSocketContext(), chainId, fileDescriptor);
     }
 
     @Override
     protected void bind(InetAddress host, int port) throws IOException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     protected void listen(int backlog) throws IOException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     protected void accept(SocketImpl s) throws IOException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -86,7 +91,15 @@ public class RtnsSocketImpl extends SocketImpl {
 
     @Override
     protected int available() throws IOException {
-        return 0;
+        try {
+            int available = inputStream.available();
+            if (available < 0) {
+                available = 0;
+            }
+            return available;
+        } catch (IOException exception) {
+            throw exception;
+        }
     }
 
     @Override
