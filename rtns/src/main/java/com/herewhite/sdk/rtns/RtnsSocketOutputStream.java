@@ -1,4 +1,4 @@
-package com.herewhite.sdk.nativesocket;
+package com.herewhite.sdk.rtns;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -6,7 +6,7 @@ import java.io.IOException;
 /**
  * @author fenglibin
  */
-public class RtnsSocketOutputStream extends FileOutputStream {
+class RtnsSocketOutputStream extends FileOutputStream {
     private final RtnsSocketImpl impl;
 
     public RtnsSocketOutputStream(RtnsSocketImpl impl) {

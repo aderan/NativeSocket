@@ -1,4 +1,4 @@
-package com.herewhite.sdk.nativesocket;
+package com.herewhite.sdk.rtns;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -10,7 +10,15 @@ import javax.net.SocketFactory;
  * @author fenglibin
  */
 public class RtnsSocketFactory extends SocketFactory {
-    NativeSocketHelper helper = new NativeSocketHelper();
+    final NativeSocketHelper helper;
+
+    public RtnsSocketFactory(RtnsSocketConf conf) {
+        helper = new NativeSocketHelper(conf);
+    }
+
+    public RtnsSocketFactory(RtnsSocketConfProvider confProvider) {
+        helper = new NativeSocketHelper(confProvider);
+    }
 
     @Override
     public Socket createSocket() throws IOException {

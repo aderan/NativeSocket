@@ -1,11 +1,10 @@
-package com.herewhite.sdk.nativesocket;
+package com.herewhite.sdk.rtns;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketImpl;
@@ -13,10 +12,10 @@ import java.net.SocketImpl;
 /**
  * @author fenglibin
  */
-public class RtnsSocketImpl extends SocketImpl {
+class RtnsSocketImpl extends SocketImpl {
     NativeSocketHelper nativeSocketHelper;
 
-    private FileDescriptor fileDescriptor;
+    private FileDescriptor fd;
     private int timeout;
 
     private InputStream inputStream;
@@ -25,7 +24,7 @@ public class RtnsSocketImpl extends SocketImpl {
     public RtnsSocketImpl(NativeSocketHelper helper) {
         this.nativeSocketHelper = helper;
 
-        fileDescriptor = new FileDescriptor();
+        fd = new FileDescriptor();
     }
 
     @Override
@@ -45,17 +44,7 @@ public class RtnsSocketImpl extends SocketImpl {
 
     @Override
     protected void connect(SocketAddress address, int timeout) throws IOException {
-        // map address to chainId
-        int chainId = 0;
-        if (address instanceof InetSocketAddress) {
-            InetSocketAddress isa = (InetSocketAddress) address;
-            if ("121.196.198.83".equals(isa.getAddress().getHostAddress())) {
-                chainId = 336;
-            } else if ("echo.websocket.org".equals(isa.getAddress().getHostName())) {
-                chainId = 334;
-            }
-        }
-        nativeSocketHelper.connect(nativeSocketHelper.getSocketContext(), chainId, fileDescriptor);
+        nativeSocketHelper.connect(address, timeout, fd);
     }
 
     @Override
@@ -91,6 +80,7 @@ public class RtnsSocketImpl extends SocketImpl {
 
     @Override
     protected int available() throws IOException {
+//        return 0;
         try {
             int available = inputStream.available();
             if (available < 0) {
@@ -104,7 +94,7 @@ public class RtnsSocketImpl extends SocketImpl {
 
     @Override
     protected void close() throws IOException {
-
+        nativeSocketHelper.close(fd);
     }
 
     @Override
@@ -129,6 +119,6 @@ public class RtnsSocketImpl extends SocketImpl {
     }
 
     public FileDescriptor getFD() {
-        return fileDescriptor;
+        return fd;
     }
 }

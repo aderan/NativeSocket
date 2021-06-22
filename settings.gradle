@@ -1,2 +1,3 @@
+include ':rtns'
 include ':app'
-rootProject.name = "Native-websocket"
+rootProject.name = "native-socket"

@@ -20,9 +20,9 @@ project("nativesocket")
 
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 add_library(
-        native-lib
+        native-socket-lib
         SHARED
-        native-lib.cpp)
+        native-socket-lib.cpp)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
@@ -42,7 +42,7 @@ find_library( # Sets the name of the path variable.
         log)
 
 target_link_libraries( # Specifies the target library.
-        native-lib
+        native-socket-lib
 
         agora-rtns-lib
         # Links the target library to the log library

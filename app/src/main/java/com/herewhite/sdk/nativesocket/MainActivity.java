@@ -6,7 +6,11 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
-import java.io.IOException;
+import com.herewhite.sdk.rtns.RtnsSocketConfProvider;
+import com.herewhite.sdk.rtns.RtnsSocketFactory;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import androidx.appcompat.app.AppCompatActivity;
 import okhttp3.OkHttpClient;
@@ -14,21 +18,21 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
-import okio.Buffer;
 import okio.ByteString;
 
+/**
+ * @author fenglibin
+ */
 public class MainActivity extends AppCompatActivity {
-    OkHttpClient client = new OkHttpClient.Builder()
-            .socketFactory(new RtnsSocketFactory())
-            .retryOnConnectionFailure(true)
-            .build();
-
+    OkHttpClient client;
     TextView tv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        initClient();
 
         // Example of a call to a native method
         tv = findViewById(R.id.sample_text);
@@ -37,15 +41,11 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.test).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // tv.setText(new NativeSocketHelper().stringFromJNI());
                 testWebSocket();
-                // testHttpGreeting();
             }
 
             private void testWebSocket() {
-//                Request request = new Request.Builder().url("ws://121.196.198.83/echo").build();
                 Request request = new Request.Builder().url("ws://121.196.198.83/echo").build();
-//                Request request = new Request.Builder().url("wss://echo.websocket.org").build();
                 WebSocket ws = client.newWebSocket(request, new WebSocketListener() {
                     @Override
                     public void onOpen(WebSocket webSocket, Response response) {
@@ -85,49 +85,39 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
                         super.onFailure(webSocket, t, response);
-                        Log.e("NativeSocket", "" + t.toString());
+                        Log.e("MainActivity", "" + t.toString());
                     }
                 });
                 Log.e("MainActivity", "onStart");
             }
-
-            private void testHttpGreeting() {
-                RtnsSocketImpl socketImpl = new RtnsSocketImpl(new NativeSocketHelper());
-                try {
-                    socketImpl.create(true);
-                    socketImpl.connect("", 80);
-                    Buffer buffer = new Buffer();
-                    buffer.writeUtf8("GET /greeting HTTP/1.1\r\n")
-                            .writeUtf8("Host: 127.0.0.1\r\n")
-                            .writeUtf8("Connection: Close\r\n\r\n");
-                    socketImpl.getOutputStream().write(buffer.readByteArray());
-
-                    byte[] data = new byte[65520];
-                    int len = 0;
-                    while (len < 10) {
-                        int size = socketImpl.getInputStream().read(data, len, data.length - len);
-                        if (size > 0) {
-                            len += size;
-                        } else {
-                            break;
-                        }
-                    }
-                    byte[] result = new byte[len];
-                    System.arraycopy(data, 0, result, 0, len);
-                    Log.e("NativeSocket", new String(result));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
         });
     }
 
-    private void output(final String txt) {
-        runOnUiThread(new Runnable() {
+    private void initClient() {
+        RtnsSocketConfProvider confProvider = new RtnsSocketConfProvider("7e8224ffaec64a2dac57b5d3e25f3953", "007eJxTYOB7nzWNIf+Wld0rnROZ00yWbzuwZcoi7/RL1Ze/7e44eVNZgcE81cLIyCQtLTE12cwk0SglMdnUPMk0xTjVyDTN2NLU2L/6YsKBzwwM8b39jMwMjAwQwAylWYAYADwzIEI=") {
             @Override
-            public void run() {
-                tv.append("\n\n" + txt);
+            public int getChainIdByAddress(SocketAddress address) {
+                int chainId = 0;
+                if (address instanceof InetSocketAddress) {
+                    InetSocketAddress isa = (InetSocketAddress) address;
+                    if ("121.196.198.83".equals(isa.getAddress().getHostAddress())) {
+                        chainId = 336;
+                    } else if ("echo.websocket.org".equals(isa.getAddress().getHostName())) {
+                        chainId = 334;
+                    } else if ("gateway.netless.link".equals(isa.getAddress().getHostName())) {
+                        chainId = 370;
+                    }
+                }
+                return chainId;
             }
-        });
+        };
+        client = new OkHttpClient.Builder()
+                .socketFactory(new RtnsSocketFactory(confProvider))
+                .retryOnConnectionFailure(true)
+                .build();
+    }
+
+    private void output(final String txt) {
+        runOnUiThread(() -> tv.append("\n\n" + txt));
     }
 }
