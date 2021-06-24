@@ -15,7 +15,6 @@ import java.net.SocketImpl;
 class RtnsSocketImpl extends SocketImpl {
     NativeSocketHelper nativeSocketHelper;
 
-    private FileDescriptor fd;
     private int timeout;
 
     private InputStream inputStream;
@@ -23,7 +22,6 @@ class RtnsSocketImpl extends SocketImpl {
 
     public RtnsSocketImpl(NativeSocketHelper helper) {
         this.nativeSocketHelper = helper;
-
         fd = new FileDescriptor();
     }
 
@@ -49,7 +47,8 @@ class RtnsSocketImpl extends SocketImpl {
 
     @Override
     protected void bind(InetAddress host, int port) throws IOException {
-        throw new UnsupportedOperationException();
+        // throw new UnsupportedOperationException();
+        // TODO Android 23 And Before Will Call Bind
     }
 
     @Override
@@ -80,7 +79,6 @@ class RtnsSocketImpl extends SocketImpl {
 
     @Override
     protected int available() throws IOException {
-//        return 0;
         try {
             int available = inputStream.available();
             if (available < 0) {
