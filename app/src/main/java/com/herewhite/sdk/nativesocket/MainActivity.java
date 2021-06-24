@@ -1,5 +1,6 @@
 package com.herewhite.sdk.nativesocket;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -12,7 +13,6 @@ import com.herewhite.sdk.rtns.RtnsSocketFactory;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import androidx.appcompat.app.AppCompatActivity;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -23,10 +23,9 @@ import okio.ByteString;
 /**
  * @author fenglibin
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     OkHttpClient client;
     TextView tv;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
         initClient();
 
         // Example of a call to a native method
-        tv = findViewById(R.id.sample_text);
+        tv = (TextView) findViewById(R.id.sample_text);
         tv.setMovementMethod(ScrollingMovementMethod.getInstance());
 
         findViewById(R.id.test).setOnClickListener(new View.OnClickListener() {
@@ -46,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
 
             private void testWebSocket() {
                 Request request = new Request.Builder().url("ws://121.196.198.83/echo").build();
+//                Request request = new Request.Builder().url("wss://echo.websocket.org").build();
                 WebSocket ws = client.newWebSocket(request, new WebSocketListener() {
                     @Override
                     public void onOpen(WebSocket webSocket, Response response) {
@@ -94,7 +94,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initClient() {
-        RtnsSocketConfProvider confProvider = new RtnsSocketConfProvider("7e8224ffaec64a2dac57b5d3e25f3953", "007eJxTYOB7nzWNIf+Wld0rnROZ00yWbzuwZcoi7/RL1Ze/7e44eVNZgcE81cLIyCQtLTE12cwk0SglMdnUPMk0xTjVyDTN2NLU2L/6YsKBzwwM8b39jMwMjAwQwAylWYAYADwzIEI=") {
+        RtnsSocketConfProvider confProvider = new RtnsSocketConfProvider(
+                "7e8224ffaec64a2dac57b5d3e25f3953",
+                "007eJxTYFCwNdq85KxvV/pB4wsXz2y6976FJ8dv178/a1P7k+7PfvFEgcE81cLIyCQtLTE12cwk0SglMdnUPMk0xTjVyDTN2NLUeP3fywkOdawMsTffszAzMIIhiA/UmWJuZGxmmppkaWFsYmFqbGmeapxqnGaZYmJmkJSSksjFYGRhYWRsYmhkbswE14csysLAwAAAibMwyw==") {
             @Override
             public int getChainIdByAddress(SocketAddress address) {
                 int chainId = 0;

@@ -3,6 +3,7 @@ buildscript {
     repositories {
         google()
         jcenter()
+        maven { url 'https://artifact.codavel.com:8081/artifactory/android'}
     }
     dependencies {
         classpath "com.android.tools.build:gradle:4.1.2"
@@ -16,6 +17,7 @@ allprojects {
     repositories {
         google()
         jcenter()
+        maven { url 'https://artifact.codavel.com:8081/artifactory/android'}
     }
 }
 

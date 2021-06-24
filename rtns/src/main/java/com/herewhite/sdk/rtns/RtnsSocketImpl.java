@@ -15,7 +15,6 @@ import java.net.SocketImpl;
 class RtnsSocketImpl extends SocketImpl {
     NativeSocketHelper nativeSocketHelper;
 
-    private FileDescriptor fd;
     private int timeout;
 
     private InputStream inputStream;
@@ -23,13 +22,12 @@ class RtnsSocketImpl extends SocketImpl {
 
     public RtnsSocketImpl(NativeSocketHelper helper) {
         this.nativeSocketHelper = helper;
-
-        fd = new FileDescriptor();
     }
 
     @Override
     protected void create(boolean stream) throws IOException {
         nativeSocketHelper.ensureContextCreated();
+        fd = new FileDescriptor();
     }
 
     @Override
@@ -49,7 +47,7 @@ class RtnsSocketImpl extends SocketImpl {
 
     @Override
     protected void bind(InetAddress host, int port) throws IOException {
-        throw new UnsupportedOperationException();
+        // throw new UnsupportedOperationException();
     }
 
     @Override
