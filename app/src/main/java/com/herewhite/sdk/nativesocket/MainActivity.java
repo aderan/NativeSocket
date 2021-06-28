@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
+import android.webkit.WebView;
 import android.widget.TextView;
 
 import com.herewhite.sdk.rtns.RtnsSocketConfProvider;
@@ -26,6 +27,7 @@ import okio.ByteString;
 public class MainActivity extends AppCompatActivity {
     OkHttpClient client;
     TextView tv;
+    WebView webView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,6 +40,14 @@ public class MainActivity extends AppCompatActivity {
         tv = findViewById(R.id.sample_text);
         tv.setMovementMethod(ScrollingMovementMethod.getInstance());
 
+        webView = findViewById(R.id.webview);
+
+        findViewById(R.id.closeWeb).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
         findViewById(R.id.test).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -94,7 +104,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initClient() {
-        RtnsSocketConfProvider confProvider = new RtnsSocketConfProvider("7e8224ffaec64a2dac57b5d3e25f3953", "007eJxTYOB7nzWNIf+Wld0rnROZ00yWbzuwZcoi7/RL1Ze/7e44eVNZgcE81cLIyCQtLTE12cwk0SglMdnUPMk0xTjVyDTN2NLU2L/6YsKBzwwM8b39jMwMjAwQwAylWYAYADwzIEI=") {
+        RtnsSocketConfProvider confProvider = new RtnsSocketConfProvider("7e8224ffaec64a2dac57b5d3e25f3953",
+                "007eJxTYAgUu7zOMPjjVsZz/H4zgqyYeHVvzWUuUbwR+mZTkU2djL0Cg3mqhZGRSVpaYmqymUmiUUpisql5kmmKcaqRaZqxpalxiPbNBIc6VoaKV4tYmRkYwRDEB+pMMTcyNjNNTbK0MDaxMDW2NE81TjVOs0wxMTNISklJ5GIwsrAwMjYxNDI3YILrQxZlYWBgAACziCll") {
             @Override
             public int getChainIdByAddress(SocketAddress address) {
                 int chainId = 0;

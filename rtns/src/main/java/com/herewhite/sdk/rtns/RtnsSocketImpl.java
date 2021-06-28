@@ -109,7 +109,11 @@ class RtnsSocketImpl extends SocketImpl {
 
     @Override
     public Object getOption(int optID) throws SocketException {
-        return null;
+        if (optID == SO_TIMEOUT) {
+            return timeout;
+        } else {
+            return null;
+        }
     }
 
     public int getTimeout() {

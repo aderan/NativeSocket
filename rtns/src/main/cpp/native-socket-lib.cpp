@@ -62,10 +62,11 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_com_herewhite_sdk_rtns_NativeSocketHelper_createContext(JNIEnv *env, jobject helper,
                                                              jstring app_id,
                                                              jstring token) {
+    LOGI("[rtns-tcp-demo] agora createContext\n");
     const char *native_app_id = env->GetStringUTFChars(app_id, 0);
     const char *native_token = env->GetStringUTFChars(token, 0);
 
-    agora_socket_context *ctx = create_context(native_app_id, native_token, "");
+    agora_socket_context *ctx = create_context(native_app_id, native_token, "/data/data/com.herewhite.demo/cache/log.txt");
 
     env->ReleaseStringUTFChars(app_id, native_app_id);
     env->ReleaseStringUTFChars(token, native_token);
@@ -79,6 +80,7 @@ Java_com_herewhite_sdk_rtns_NativeSocketHelper_connect(JNIEnv *env,
                                                        jlong context,
                                                        jint chain_id,
                                                        jobject fileDescriptor) {
+    LOGI("[rtns-tcp-demo] agora connection start\n");
     char connection_id[64] = {};
     int fd = agora_socket_tcp_connect(reinterpret_cast<agora_socket_context *>(context),
                                       chain_id,
